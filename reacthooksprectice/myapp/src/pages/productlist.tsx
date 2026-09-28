@@ -1,9 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { useFetch } from "../hooks/useFetch";
-import { useDebounce } from "../hooks/useDebounce";
-import type { Product } from "../types/product";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-const API_URL = "https://fakestoreapi.com/products";
+import { useFetch } from "../hooks/usefetch";
+import { useDebounce } from "../hooks/usedebounce";
+import type { Product } from "../types/product";
+import { useTheme } from "../context/themecontext";
+import ProductCard from "../components/productcard";
+
+const API_URL =
+  "https://fakestoreapi.com/products";
 
 export default function ProductList() {
   const {
@@ -14,9 +22,13 @@ export default function ProductList() {
 
   const [search, setSearch] = useState("");
 
-  const debouncedSearch = useDebounce(search, 300);
+  const debouncedSearch =
+    useDebounce(search, 300);
 
-  const searchRef = useRef<HTMLInputElement>(null);
+  const searchRef =
+    useRef<HTMLInputElement>(null);
+
+  const { theme } = useTheme();
 
   useEffect(() => {
     searchRef.current?.focus();
@@ -26,7 +38,9 @@ export default function ProductList() {
     products?.filter((product) =>
       product.title
         .toLowerCase()
-        .includes(debouncedSearch.toLowerCase())
+        .includes(
+          debouncedSearch.toLowerCase()
+        )
     ) ?? [];
 
   if (loading) {
@@ -38,7 +52,20 @@ export default function ProductList() {
   }
 
   return (
-    <div>
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: "20px",
+        background:
+          theme === "light"
+            ? "#ffffff"
+            : "#111111",
+        color:
+          theme === "light"
+            ? "#111111"
+            : "#ffffff",
+      }}
+    >
       <h1>Product List</h1>
 
       <input
@@ -53,21 +80,12 @@ export default function ProductList() {
 
       <div>
         {filteredProducts.map((product) => (
-          <div key={product.id}>
-            <img
-              src={product.image}
-              alt={product.title}
-              width="150"
-            />
-
-            <h2>{product.title}</h2>
-
-            <p>${product.price}</p>
-
-            <p>{product.category}</p>
-          </div>
+          <ProductCard
+            key={product.id}
+            product={product}
+          />
         ))}
       </div>
-    </div>
+    </main>
   );
 }
