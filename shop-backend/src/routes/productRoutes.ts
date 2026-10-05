@@ -2,22 +2,39 @@ import { Router } from "express";
 
 import {
   getProducts,
-  getProduct,
   createProduct,
   updateProduct,
   deleteProduct,
-} from "../controllers/productController";
+} from "../controllers/productController.js";
+
+import { authenticate } from "../middleware/authenticate.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 
 const router = Router();
 
+// Public
 router.get("/", getProducts);
 
-router.get("/:id", getProduct);
+// Admin only
+router.post(
+  "/",
+  authenticate,
+  requireAdmin,
+  createProduct
+);
 
-router.post("/", createProduct);
+router.put(
+  "/:id",
+  authenticate,
+  requireAdmin,
+  updateProduct
+);
 
-router.put("/:id", updateProduct);
-
-router.delete("/:id", deleteProduct);
+router.delete(
+  "/:id",
+  authenticate,
+  requireAdmin,
+  deleteProduct
+);
 
 export default router;
