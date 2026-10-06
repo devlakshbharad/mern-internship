@@ -4,23 +4,30 @@ import {
   useState,
 } from "react";
 
-import { useFetch } from "../hooks/usefetch";
+import axios from "axios";
 import { useDebounce } from "../hooks/usedebounce";
 import type { Product } from "../types/product";
 import { useTheme } from "../context/themecontext";
 import ProductCard from "../components/productcard";
+import { api } from "../api/axios";
 
-const API_URL =
-  "https://fakestoreapi.com/products";
+interface ProductsResponse {
+  data: Product[];
+  page: number;
+  limit: number;
+  total: number;
+}
 
 export default function ProductList() {
-  const {
-    data: products,
-    loading,
-    error,
-  } = useFetch<Product[]>(API_URL);
-
+  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
+
+  const [page, setPage] = useState(1);
+  const limit = 6;
+
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const debouncedSearch =
     useDebounce(search, 300);
@@ -34,22 +41,51 @@ export default function ProductList() {
     searchRef.current?.focus();
   }, []);
 
-  const filteredProducts =
-    products?.filter((product) =>
-      product.title
-        .toLowerCase()
-        .includes(
-          debouncedSearch.toLowerCase()
-        )
-    ) ?? [];
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
-  if (loading) {
-    return <h2>Loading products...</h2>;
-  }
+  useEffect(() => {
+    const getProducts = async () => {
+      setLoading(true);
+      setError("");
 
-  if (error) {
-    return <h2>Error: {error}</h2>;
-  }
+      try {
+        const response =
+          await api.get<ProductsResponse>(
+            "/products",
+            {
+              params: {
+                search: debouncedSearch,
+                page,
+                limit,
+              },
+            }
+          );
+
+        setProducts(response.data.data);
+        setTotal(response.data.total);
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          setError(
+            error.response?.data?.message ??
+              "Failed to load products"
+          );
+        } else {
+          setError(
+            "Failed to load products"
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void getProducts();
+  }, [debouncedSearch, page]);
+
+  const totalPages =
+    Math.ceil(total / limit);
 
   return (
     <main
@@ -78,14 +114,70 @@ export default function ProductList() {
         }
       />
 
-      <div>
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-          />
-        ))}
-      </div>
+      {loading && (
+        <h2>Loading products...</h2>
+      )}
+
+      {error && (
+        <h2>Error: {error}</h2>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div>
+            {products.length === 0 ? (
+              <p>No products found.</p>
+            ) : (
+              products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                />
+              ))
+            )}
+          </div>
+
+          <div
+            style={{
+              marginTop: "20px",
+            }}
+          >
+            <button
+              onClick={() =>
+                setPage((current) =>
+                  current - 1
+                )
+              }
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+
+            <span
+              style={{
+                margin: "0 15px",
+              }}
+            >
+              Page {page} of{" "}
+              {totalPages || 1}
+            </span>
+
+            <button
+              onClick={() =>
+                setPage((current) =>
+                  current + 1
+                )
+              }
+              disabled={
+                page >= totalPages ||
+                totalPages === 0
+              }
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
     </main>
   );
 }
